@@ -1,0 +1,40 @@
+name: Build ENOUGH APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create Flutter project
+        run: flutter create --org com.enough --project-name enough_app --platforms=android tmp_app
+
+      - name: Add app code and permissions
+        run: |
+          cp app_main.dart tmp_app/lib/main.dart
+          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' tmp_app/android/app/src/main/AndroidManifest.xml
+          sed -i 's|android:label="enough_app"|android:label="ENOUGH"|' tmp_app/android/app/src/main/AndroidManifest.xml
+
+      - name: Build APK
+        working-directory: tmp_app
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ENOUGH-apk
+          path: tmp_app/build/app/outputs/flutter-apk/app-release.apk
