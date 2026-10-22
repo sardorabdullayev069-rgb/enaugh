@@ -1,0 +1,46 @@
+name: Deploy ENOUGH web
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create Flutter project
+        run: flutter create --org com.enough --project-name enough_app --platforms=web tmp_app
+
+      - name: Add app code
+        run: cp app_main.dart tmp_app/lib/main.dart
+
+      - name: Build web
+        working-directory: tmp_app
+        run: flutter build web --release --base-href "/enaugh/"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: tmp_app/build/web
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
